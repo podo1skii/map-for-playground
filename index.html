@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.52.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.52.0/mapbox-gl.css' rel='stylesheet' />
+    <script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v2.3.0/mapbox-gl-geocoder.min.js'></script>
+    <link rel='stylesheet' href='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v2.3.0/mapbox-gl-geocoder.css' type='text/css' />
+    <script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-language/v0.10.0/mapbox-gl-language.js'></script>
+
+
+    <title>test1</title>
+    <style>
+        body { margin:0; padding:0; }
+        #map { position:absolute; top:0; bottom:0; width:100%; }
+
+        .mapboxgl-popup-content {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #5181B8;
+            max-width: 200px;
+        }
+        .mapboxgl-popup-tip {
+            position: absolute;
+            left: 1683px;
+            right: 820px;
+            top: 4653px;
+            bottom: 587px;
+
+            background: rgba(248, 248, 248, 0.82);
+            backdrop-filter: blur(54.3656px);
+            /* Note: backdrop-filter has minimal browser support */
+            border-radius: 14px 14px 0px 0px;
+        }
+         .map-overlay {
+             font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+             position: absolute;
+             width: 80%;
+             /*top: 0;*/
+             /*left: 50%;*/
+             padding-left: 10%;
+             padding-right:10%;
+             padding-top: 10px;
+             text-align: center;
+             margin: auto;
+
+         }
+
+        .map-overlay .map-overlay-inner {
+            background-color: #fff;
+            box-shadow:0 1px 2px rgba(0, 0, 0, 0.10);
+            border-radius: 3px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .map-overlay-inner fieldset {
+            border: none;
+            padding: 0;
+            margin: 0 0 10px;
+        }
+
+        .map-overlay-inner fieldset:last-child {
+            margin: 0;
+        }
+
+        .map-overlay-inner select {
+            width: 100%;
+        }
+
+        .map-overlay-inner label {
+            display: block;
+            font-weight: bold;
+            margin: 0 0 5px;
+        }
+
+        .map-overlay-inner button {
+            display: inline-block;
+            width: 36px;
+            height: 20px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .map-overlay-inner button:focus {
+            outline: none;
+        }
+
+        .map-overlay-inner button:hover {
+            box-shadow:inset 0 0 0 3px rgba(0, 0, 0, 0.10);
+        }
+
+    </style>
+</head>
+<body>
+
+
+
+<button onclick="reload()" style="position: absolute;z-index: 100">Nazhmi</button>
+<div id='map'></div>
+
+
+<script type="text/javascript" src="navigation.js"></script>
+<script type="text/javascript" src="infoRoad.js"></script>
+<script>
+
+
+
+
+
+var index = 0;
+
+
+
+
+    mapboxgl.accessToken = 'pk.eyJ1IjoicG9kbzFza2lpIiwiYSI6ImNqcGE2Nno5bjFyamszcW40OHFwNmI5aG4ifQ.G24jGyn9ueY8JL2BHWDnuw';
+    var map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/podo1skii/cjr9cziyj0bx72sps994mvwqd',
+        center: [37.313601994101305,
+            44.895141513141084],
+        zoom: 10,
+        maxBounds:[[ 37.22766338868854, 44.76084461088669],[37.38510304258929, 45.01691753712126]],
+        pitchWithRotate: false
+    });
+
+    function reload() {
+        new mapboxgl.Marker({color:'#0071bc'})
+            .setLngLat([30.3165,59.9392])
+            .addTo(map);
+
+    }
+
+
+
+
+    var nav = new mapboxgl.NavigationControl({
+        showCompass: true
+        }
+    );
+    map.addControl(nav, 'bottom-right');
+
+    var geo = new mapboxgl.GeolocateControl({
+        positionOptions: {
+            enableHighAccuracy: true
+        },
+        trackUserLocation: true
+    });
+    map.addControl(geo, 'bottom-right');
+    console.log(map.getLayer("route"));
+
+
+        // map.setFilter('places',['==','type','football']);
+
+        map.on('load', function () {
+
+
+            //map.setLayoutProperty('places', 'visibility', 'none');
+
+            //map.addLayer(data);
+            map.on('click', 'places', function (e) {
+
+                console.log(e);
+                if (map.getLayer("route-" + index) !== undefined) {
+                    map.removeLayer("route-" + index);
+                }
+                index += 1;
+                var coordinates = e.features[0].geometry.coordinates.slice();
+                var crd = coordinates[0] + "," + coordinates[1];
+
+                var road = roadResponse("29.830570082302756,59.876312127073874", crd);
+
+                map.addLayer(roadLayer(index, road), 'places');
+
+                var description = "<h2>"+e.features[0].properties.name+"</h2>"
+                    +"<h3>"+distanceInfo(road.routes[0].distance)+" "+road.way+"</h3>"+
+                "<h1>"+durationInfo(road.routes[0].duration)+" "+road.way+"</h1>";
+                map.flyTo({
+                    center: e.features[0].geometry.coordinates,
+                    zoom: 15
+
+                });
+
+                while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+                    coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+                }
+
+
+                let pop = new mapboxgl.Popup({anchor:'bottom'})
+                    .setLngLat(coordinates)
+                    .setHTML(description)
+                    .addTo(map);
+
+
+
+
+
+
+            });
+        });
+
+        map.on('edit',function (e) {
+            alert(e);
+        });
+
+</script>
+
+</body>
+</html>
